@@ -21,3 +21,6 @@ kubectl run xxx-app --image=bgelov/xxxx --port 8008
 kubectl get pods 
 
 
+kubectl exec -it xiu-app -- /bin/bash
+kubectl exec -it xiu-app -- /bin/sh
+
