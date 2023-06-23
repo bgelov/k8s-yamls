@@ -2,6 +2,7 @@
 Some kubernetes yaml files in this repository
 
 # Cheat sheet
+More kubernetes cheatsheet: https://kubernetes.io/ru/docs/reference/kubectl/cheatsheet/
 ## k8s autocomplete
 
 ```
