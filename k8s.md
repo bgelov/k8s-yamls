@@ -439,6 +439,32 @@ kubectl get events --watch
           periodSeconds: 5
 ```
 
+httpHeaders для httpGet когда нам нужно следить за определённым именем хоста на поде
+
+```
+  template:
+    metadata:
+      labels:
+        app: http-server-http-with-host-headers
+    spec:
+      containers:
+      - name: kuber-app
+        image: bakavets/kuber:livenessprobe-http-with-host-headers
+        ports:
+        - containerPort: 80
+        livenessProbe:
+          httpGet:
+            path: /
+            httpHeaders:
+            - name: Host
+              value: kuber-healthy.example.com
+            port: 80
+          # initialDelaySeconds: 5
+          periodSeconds: 5
+```
+
+
+
 - tcp
 Проверка tcp сокета. Пытается открыть подключение к указанному порту.
 ```
@@ -528,5 +554,107 @@ Readiness Probes часто используют совместно с Liveness 
           periodSeconds: 5
 ```
 
+
+# Startup Probe
+Иногда приложению может потребоваться больше времени для инициализации.
+Startup Probe устанавливается большее время для старта контейнера.
+
+```
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kuber-http-allprobes
+  labels:
+    app: kuber
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kuber-http-allprobes
+  template:
+    metadata:
+      labels:
+        app: kuber-http-allprobes
+    spec:
+      containers:
+      - name: kuber-app
+        image: bakavets/kuber:v1.0
+        ports:
+        - containerPort: 8000
+        startupProbe:
+          exec:
+            command:
+            - cat
+            - /server-test.py
+          initialDelaySeconds: 10
+          failureThreshold: 30 # 30 * 10 = 300 + 10 = 310 sec
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 8000
+          initialDelaySeconds: 10
+          periodSeconds: 5
+        livenessProbe:
+          exec:
+            command:
+            - cat
+            - /server-test.py
+          failureThreshold: 1
+          periodSeconds: 10
+  ```
+
+
+# Переопределение CMD и ENTRYPOINT Docker иструкций
+
+Для переопределения CMD инструкций, мы их указываем в args аттрибуте контейнера
+
+```
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kuber-args
+  labels:
+    app: kuber
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: http-server-args
+  template:
+    metadata:
+      labels:
+        app: http-server-args
+    spec:
+      containers:
+      - name: kuber-app
+        image: bakavets/kuber:v1.0-args
+        args: 
+        - "3"
+        - "2"
+        - text-temp
+        ports:
+        - containerPort: 8000
+```
+
+Для переопределения ENTRYPOINT мы пишем инструкцию command
+```
+  template:
+    metadata:
+      labels:
+        app: http-server-args
+    spec:
+      containers:
+      - name: kuber-app
+        image: bakavets/kuber:v1.0-args
+        command: ["xiu", "-c", "/etc/xiu/config_rtmp.toml"]
+        # при указании в столбик числа необходимо брать в двойные кавычки
+        args: 
+        - "3"
+        - "2"
+        - text-temp
+        ports:
+        - containerPort: 8000
+```
 
 
