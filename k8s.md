@@ -1,10 +1,19 @@
 kubectl version
 
+kubectl apply -f <путь до файла или прямая ссылка на файл>
+
 # Minikube
 
 # Dashboard
 https://github.com/bgelov/k8s-yamls/tree/main/web-ui-dashboard
+
+Get token
+kubectl -n kubernetes-dashboard create token admin-user
+
+Start dashboard
+
 kubectl proxy
+Dashboard link: http://localhost:8001/api/v1/namespaces/kubernetes-dashboard/services/https:kubernetes-dashboard:/proxy/
 
 # Config
 kubectl config get-clusters
@@ -35,6 +44,9 @@ kubectl port-forward bgelov-app 8888:8888
 
 Удалить под
 kubectl delete po bgelov-app
+
+Удалить под в конкретном неймспейсе
+kubectl delete -n default pod bgelov-rc-pf5lj
 
 Удалить под с определённой меткой
 kubectl delete po -l app=nginx
@@ -100,6 +112,92 @@ kubectl get po --all-namespaces
 
 Удалить неймспейс вместе с подами внутри
 kubectl delete ns qa
+
+
+# ReplicationController
+Является устаревшим, переходим на ReplicaSet
+
+Просмотр ReplicationController
+kubectl get rc
+
+Удаление ReplicationController 
+kubectl delete rc bgelov-rc
+
+Метка в шаблоне должна совпадать с селектором `app: myapp`
+
+```
+apiVersion: v1
+kind: ReplicationController
+metadata:
+  name: myapp
+spec:
+  replicas: <Replicas>
+  selector:
+    app: myapp
+  template:
+    metadata:
+      name: myapp
+      labels:
+        app: myapp
+    spec:
+      containers:
+        - name: myapp
+          image: <Image>
+          ports:
+            - containerPort: <Port>
+```
+
+# ReplicaSet
+Заменяет 
+
+```
+apiVersion: apps/v1
+kind: ReplicaSet
+metadata:
+  name: xiu-rs-2
+  labels:
+    app: xiu
+spec:
+  replicas: 3
+  selector:
+    matchExpressions:
+      - key: app
+        operator: In
+        values:
+          - xiu
+          - http-server
+  template:
+    metadata:
+      labels:
+        app: xiu
+        env: dev
+    spec:
+      containers:
+        - name: xiu-app
+          image: bgelov/1687346100-977d03e7f0746077d90baa216bbf61c2:1.0.0
+          ports:
+            - containerPort: 1935
+
+```   
+
+
+# Deployment
+Деплоймент занимается репликасетами, а репликасеты занимаются конкретными подами
+
+kubectl get deployment
+
+kubectl create deployment xiu-app-depl --image=bgelov/1687346100-977d03e7f0746077d90baa216bbf61c2:1.0.0 --port=8888 --replicas=3
+
+Изменим образ у подов деплоймента. Удалятся со старым образом и создадутся поды с новым образом.
+kubectl set image deployment/xiu-app-depl 1687346100-977d03e7f0746077d90baa216bbf61c2=nginx --record
+Останется старый репликасет, он станет пустым. Пустой репликасет удалять не нужно.
+
+Посмотреть yaml деплоймента
+kubectl get deployment xiu-app-depl -o yaml
+
+Удалить деплоймент в неймспейсе default
+kubectl delete -n default deployment nginx-temp
+
 
 
 # Service
