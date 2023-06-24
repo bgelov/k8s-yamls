@@ -2,6 +2,8 @@ kubectl version
 
 kubectl apply -f <путь до файла или прямая ссылка на файл>
 
+kubectl delete -f <путь до файла или прямая ссылка на файл>
+
 # Minikube
 Запустить кластер с именем
 minikube start --profile k8s-cluster-1
@@ -31,6 +33,11 @@ kubectl config get-clusters
 kubectl config use-context k8s-cluster-1
 kubectl config use-context k8s-cluster-2
 kubectl config use-context minikube
+
+# Nodes
+
+kubectl get nodes
+kubectl get nodes -o wide
 
 # Pods
 
@@ -287,11 +294,17 @@ kubectl rollout undo deployment xiu --to-revision=1
 Предоставляет единую точку входа к группе подов, представляющих одно и то же приложение.
 Работает на основе селектора.
 Есть 4 типа:
-- ClusterIP
+- ClusterIP (дефолтный, если не указывать). Только в пределах кластера, из вне и из интернета нельзя достигнуть.
 - NodePort
 - LoadBalancer
 - ExternalName
 
+Получить сервисы
+kubectl get svc
+
+На имя сервиса можно обращаться:
+http://<имя сервиса>.<namespace>.svc.cluster.local
+cat /etc/resolv.conf
 
 
 ```
@@ -309,4 +322,7 @@ spec:
   type: NodePort
 ```
 
+# Endpoints 
+
+get endpoints
 
