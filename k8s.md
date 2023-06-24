@@ -3,6 +3,16 @@ kubectl version
 kubectl apply -f <путь до файла или прямая ссылка на файл>
 
 # Minikube
+Запустить кластер с именем
+minikube start --profile k8s-cluster-1
+minikube start --profile k8s-cluster-2
+minikube start --profile minikube
+
+Статус
+minikube status --profile k8s-cluster-1
+
+Узнать ip
+minikube ip --profile k8s-cluster-1
 
 # Dashboard
 https://github.com/bgelov/k8s-yamls/tree/main/web-ui-dashboard
@@ -199,10 +209,86 @@ kubectl get deployment xiu-app-depl -o yaml
 kubectl delete -n default deployment nginx-temp
 
 
+Стратегия RollingUpdate, когда добавляем по одной ноде и после удаляем по одной ноде
+```
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: xiu
+  labels:
+    app: xiu
+spec:
+  replicas: 5
+  minReadySeconds: 10
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 1
+    type: RollingUpdate
+  selector:
+    matchLabels:
+      app: xiu-app
+  template:
+    metadata:
+      labels:
+        app: xiu-app
+    spec:
+      containers:
+      - name: xiu-app
+        image: bgelov/1687346100-977d03e7f0746077d90baa216bbf61c2:1.0.0
+        ports:
+        - containerPort: 1935
+
+```
+
+Стратегия Recreate, когда всё удаляем и всё добавляем
+```
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: xiu
+  labels:
+    app: xiu
+spec:
+  replicas: 5
+  minReadySeconds: 10
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: xiu-app
+  template:
+    metadata:
+      labels:
+        app: xiu-app
+    spec:
+      containers:
+      - name: xiu-app
+        image: bgelov/1687346100-977d03e7f0746077d90baa216bbf61c2:1.0.0
+        ports:
+        - containerPort: 1935
+
+```
+
+
 
 # Service
 Доступ к Pod из вне
 
 
+```
+apiVersion: v1
+kind: Service
+metadata:
+  name: xiu-service
+spec:
+  selector:
+    app: xiu-app
+  ports:
+  - protocol: TCP
+    port: 8888
+    targetPort: 1935
+  type: NodePort
+```
 
 
