@@ -270,10 +270,28 @@ spec:
 
 ```
 
+# Rollout
+Откат происходит к предыдущей репликасет. Имменно поэтому их не стоит удалять, при изменении деплоймента.
+Посмотреть историю куда можно откатиться
+kubectl rollout history deployment/xiu
+
+Откатиться назад
+kubectl rollout undo deployment xiu
+
+Откатиться до ревизии 1
+kubectl rollout undo deployment xiu --to-revision=1
+
 
 
 # Service
-Доступ к Pod из вне
+Предоставляет единую точку входа к группе подов, представляющих одно и то же приложение.
+Работает на основе селектора.
+Есть 4 типа:
+- ClusterIP
+- NodePort
+- LoadBalancer
+- ExternalName
+
 
 
 ```
