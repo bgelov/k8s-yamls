@@ -658,3 +658,34 @@ spec:
 ```
 
 
+
+# DaemonSet
+Запускает какой-либо один под на всех нодах или нодах с определённым лейблом.
+
+```
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: kuber-daemonset
+  labels:
+    app: kuber-daemonset
+spec:
+  selector:
+    matchLabels:
+      app: kuber-daemon
+  template:
+    metadata:
+      labels:
+        app: kuber-daemon
+    spec:
+      nodeSelector:
+        gpu: "true"
+      containers:
+      - name: kuber-app
+        image: bakavets/kuber
+        ports:
+        - containerPort: 8000
+```
+
+
+
