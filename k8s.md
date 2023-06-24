@@ -20,6 +20,9 @@ minikube ip --profile k8s-cluster-1
 minikube addons list
 minikube addons enable ingress
 
+Открыть доступ к сервису из хост системы
+minikube service nodeport-service --url --profile k8s-cluster-1
+
 # Dashboard
 https://github.com/bgelov/k8s-yamls/tree/main/web-ui-dashboard
 
