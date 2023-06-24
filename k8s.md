@@ -16,6 +16,10 @@ minikube status --profile k8s-cluster-1
 Узнать ip
 minikube ip --profile k8s-cluster-1
 
+
+minikube addons list
+minikube addons enable ingress
+
 # Dashboard
 https://github.com/bgelov/k8s-yamls/tree/main/web-ui-dashboard
 
@@ -42,6 +46,9 @@ kubectl get nodes -o wide
 # Pods
 
 kubectl get pods --all-namespaces 
+
+Чтобы отслеживать изменения в реальном времени
+kubectl get pods --all-namespaces --watch
 
 kubectl run xxx-app --image=bgelov/xxxx --port 8008
 kubectl get pods 
@@ -380,4 +387,16 @@ spec:
 # Endpoints 
 
 kubectl get endpoints
+
+
+# Ingress
+Работает на 7 уровне, на http
+Когда мы создаём сервис loadbalancer, у нас для каждого создаётся свой лоадбалансер. Он работает на 4 уровне, на транспортном.
+
+
+minikube addons list
+minikube addons enable ingress
+
+kubectl get ingress
+
 
