@@ -1,3 +1,5 @@
+# Basic
+
 kubectl version
 
 kubectl apply -f <путь до файла или прямая ссылка на файл>
@@ -10,18 +12,24 @@ minikube start --profile k8s-cluster-1
 minikube start --profile k8s-cluster-2
 minikube start --profile minikube
 
-Статус
+Статус кластера
 minikube status --profile k8s-cluster-1
 
-Узнать ip
+Узнать ip кластера minikube
+```
 minikube ip --profile k8s-cluster-1
+```
 
+Открыть доступ к конкретному сервису в minikube из хост системы
+```
+minikube service nodeport-service --url --profile k8s-cluster-1
+```
 
+Просмотр и добавление дополнений в minikube
+```
 minikube addons list
 minikube addons enable ingress
-
-Открыть доступ к сервису из хост системы
-minikube service nodeport-service --url --profile k8s-cluster-1
+```
 
 # Dashboard
 https://github.com/bgelov/k8s-yamls/tree/main/web-ui-dashboard
@@ -396,10 +404,129 @@ kubectl get endpoints
 Работает на 7 уровне, на http
 Когда мы создаём сервис loadbalancer, у нас для каждого создаётся свой лоадбалансер. Он работает на 4 уровне, на транспортном.
 
-
+Добавление ingress сервиса в minikube
+```
 minikube addons list
 minikube addons enable ingress
+```
 
 kubectl get ingress
+
+
+# Events
+
+Проверка событий в кластере
+kubectl get events --watch
+
+
+# Liveness Probe
+Проверка живучести контейнера. Периодически происходит проверка и если она не проходит, то под автоматически перезапускается.
+Три механизма:
+- http get
+Обращается по урлу и если там ошибка, сработает проверка
+```
+    spec:
+      containers:
+      - name: kuber-app
+        image: bakavets/kuber:v1.0-unhealthy
+        ports:
+        - containerPort: 8000
+        livenessProbe:
+          httpGet:
+            path: /healthcheck
+            port: 8000
+          initialDelaySeconds: 5
+          periodSeconds: 5
+```
+
+- tcp
+Проверка tcp сокета. Пытается открыть подключение к указанному порту.
+```
+      containers:
+      - name: kuber-app
+        image: bakavets/kuber:v1.0
+        ports:
+        - containerPort: 8000
+        livenessProbe:
+          tcpSocket:
+            port: 8000
+          initialDelaySeconds: 15 # Defaults to 0 seconds. Minimum value is 0.
+          periodSeconds: 10 # Default to 10 seconds. Minimum value is 1.
+          timeoutSeconds: 1 # Defaults to 1 second. Minimum value is 1.
+          successThreshold: 1 # Defaults to 1. Must be 1 for liveness and startup Probes. Minimum value is 1.
+          failureThreshold: 3 # Defaults to 3. Minimum value is 1.
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kuber-service-tcp
+spec:
+  selector:
+    app: http-server-tcp
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 8000
+      nodePort: 30002
+  type: NodePort
+```
+
+
+- exec
+Выполняется каякая-либо exec команда
+```
+...
+      containers:
+      - name: ubuntu
+        image: ubuntu
+        args:
+        - /bin/sh
+        - -c
+        - touch /tmp/healthy; sleep 30; rm -rf /tmp/healthy; sleep 600
+        livenessProbe:
+          exec:
+            command:
+            - cat
+            - /tmp/healthy
+          # Следующие параметры задаются по умолчанию, их необязательно указывать
+          # Количество секунд от старта контейнера до начала liveness probe
+          initialDelaySeconds: 5 # Defaults to 0 seconds. Minimum value is 0.
+          # Длительность времени между пробами
+          periodSeconds: 5 # Default to 10 seconds. Minimum value is 1.
+          # Количество секунд ожидания проблы
+          timeoutSeconds: 1 # Defaults to 1 second. Minimum value is 1.
+          # Минимальное количество успешных проверок после падения
+          successThreshold: 1 # Defaults to 1. Must be 1 for liveness and startup Probes. Minimum value is 1.
+          # Количество плохих проверок, перед тем как считать проверку провалившейся
+          failureThreshold: 3 # Defaults to 3. Minimum value is 1.
+```
+
+
+# Readiness Probes
+Аналогично Liveness Probes, все те же методы, но работает для другого.
+Если Readiness Probes не будут проходить, то под не будет регистрироваться к сервису. И следовательно на этот под не будет поступать клиентский трафик.
+Readiness Probes часто используют совместно с Liveness Probes.
+
+```
+    spec:
+      containers:
+      - name: kuber-app
+        image: bakavets/kuber:v1.0-unhealthy
+        ports:
+        - containerPort: 8000
+        readinessProbe:
+          httpGet:
+            path: /healthcheck
+            port: 8000
+          initialDelaySeconds: 5
+          periodSeconds: 5
+        livenessProbe:
+          httpGet:
+            path: /healthcheck
+            port: 8000
+          initialDelaySeconds: 5
+          periodSeconds: 5
+```
+
 
 
