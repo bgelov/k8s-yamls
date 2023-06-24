@@ -295,9 +295,47 @@ kubectl rollout undo deployment xiu --to-revision=1
 Работает на основе селектора.
 Есть 4 типа:
 - ClusterIP (дефолтный, если не указывать). Только в пределах кластера, из вне и из интернета нельзя достигнуть.
-- NodePort
-- LoadBalancer
-- ExternalName
+- NodePort. Прокидываем какой-либо порт из вне.
+- LoadBalancer. Только если кубер крутится на клауд провайдере. Почти как NodePort, но ещё появляется load balancer облачного провайдера.
+- ExternalName. Когда хотим подключаться к какому-то внешнему сервису из кластера. Например, к внешней базе данных. По сути создаётся cname с кластерного имени на внешний домен. Здесь стоит иметь ввиду, что http и https будут работать неправильно из-за различных доменов в хеадере.
+
+
+Пример externalname сервиса
+```
+apiVersion: v1
+kind: Service
+metadata:
+  name: external-service
+spec:
+  type: ExternalName
+  externalName: bgelov.ru
+```
+
+
+пример NodePort:
+```
+apiVersion: v1
+kind: Service
+metadata:
+  name: nodeport-service
+spec:
+  # Чтобы трафик поступал на одну и ту же ноду. На все поды на этой ноде. Если на какой-то ноде не будет пода, то будет зависание.
+  # externalTrafficPolicy: Local
+  # Если хотим, чтобы клиенты попадали на один и тот же под
+  sessionAffinity: ClientIP
+  selector:
+    app: xiu-app
+  ports:
+  - protocol: TCP
+    port: 8888
+    targetPort: 1935
+    nodePort: 30080 # Можно не указывать 30000 - 32767 и даже лучше не указывать. k8s сам выберет порт
+  type: NodePort
+```
+
+
+Пример loadbalancer
+```
 
 Получить сервисы
 kubectl get svc
@@ -322,7 +360,24 @@ spec:
   type: NodePort
 ```
 
+Headless сервисы, без кластерного ip. По dns имени будут резолвиться все поды.
+```
+apiVersion: v1
+kind: Service
+metadata:
+  name: xiu-service
+spec:
+  ClusterIP: None
+  selector:
+    app: xiu-app
+  ports:
+  - protocol: TCP
+    port: 8888
+    targetPort: 1935
+  type: ClusterIP
+  ```
+
 # Endpoints 
 
-get endpoints
+kubectl get endpoints
 
