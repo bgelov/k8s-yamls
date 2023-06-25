@@ -730,6 +730,138 @@ spec:
         emptyDir: {}
 ```
 
+Данные в эмтидир можно так же сохранять в памяти. Для этого надо прописать параметр medium: Memory:
+```
+  volumes:
+  - name: shared-data
+    emptyDir: # {}
+       medium: Memory
+```
+
+
+- hostPath. Этот тип не рекомендует использовать сам кубернетес, так как происходит монтирование директории хоста. А если вдруг его используешь, то надо ставить ридонли.
+```
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: test-pd
+spec:
+  containers:
+  - image: bakavets/kuber
+    name: test-container
+    volumeMounts:
+    - mountPath: /test-pd
+      name: test-volume
+  volumes:
+  - name: test-volume
+    hostPath:
+      # directory location on host
+      path: /data
+      # this field is optional
+      type: Directory
+  ```
+
+
+
+
+
+
+persistentVolumeClaim - заявка на ресурсы
+persistentVolume - ресурс
+и в самом ресурсе указываем claimName
+
+```
+# https://kubernetes.io/docs/reference/kubernetes-api/config-and-storage-resources/persistent-volume-v1/
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: aws-pv-kuber
+  labels:
+    type: aws-pv-kuber
+spec:
+  capacity:
+    storage: 3Gi
+  accessModes: # https://kubernetes.io/docs/concepts/storage/persistent-volumes/#access-modes
+    - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Retain # https://kubernetes.io/docs/reference/kubernetes-api/config-and-storage-resources/persistent-volume-v1/#PersistentVolumeSpec # https://kubernetes.io/docs/concepts/storage/persistent-volumes/#recycle
+  storageClassName: "" # Empty value means that this volume does not belong to any StorageClass. https://kubernetes.io/docs/concepts/storage/persistent-volumes/#class-1
+  awsElasticBlockStore:
+    volumeID: "vol-02a71cfd076eac916"
+    fsType: ext4
+```
+
+```
+# https://kubernetes.io/docs/reference/kubernetes-api/config-and-storage-resources/persistent-volume-v1/
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: aws-pv-kuber
+  labels:
+    type: aws-pv-kuber
+spec:
+  capacity:
+    storage: 3Gi
+  accessModes: # https://kubernetes.io/docs/concepts/storage/persistent-volumes/#access-modes
+    - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Retain # https://kubernetes.io/docs/reference/kubernetes-api/config-and-storage-resources/persistent-volume-v1/#PersistentVolumeSpec # https://kubernetes.io/docs/concepts/storage/persistent-volumes/#recycle
+  storageClassName: "" # Empty value means that this volume does not belong to any StorageClass. https://kubernetes.io/docs/concepts/storage/persistent-volumes/#class-1
+  awsElasticBlockStore:
+    volumeID: "vol-02a71cfd076eac916"
+    fsType: ext4
+```
+
+```
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kuber
+  labels:
+    app: kuber
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: http-server
+  template:
+    metadata:
+      labels:
+        app: http-server
+    spec:
+      containers:
+      - name: kuber-app
+        image: bakavets/kuber
+        ports:
+        - containerPort: 8000
+        volumeMounts:
+        - mountPath: /cache
+          name: cache-volume
+      volumes:
+      - name: cache-volume
+        persistentVolumeClaim:
+          claimName: aws-pvc-kuber
+```
+
+
+
+
+
+С помощью storageclass можно настроить автоматическсое создание persistentvolume
+```
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: ebs-csi-gp3
+provisioner: ebs.csi.aws.com
+allowVolumeExpansion: true
+parameters:
+  type: gp3
+  fsType: ext4
+```
+
+
+
+
 
 # ConfigMap
 Для хранения несекретных данных в формате ключ-значение. Поды могут использовать их как переменные окружения, аргументы командной строки или файлы конфигурации волюмов.
