@@ -365,7 +365,6 @@ spec:
 
 
 Пример loadbalancer
-```
 
 Получить сервисы
 kubectl get svc
