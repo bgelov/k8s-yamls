@@ -56,6 +56,11 @@ kubectl config use-context k8s-cluster-1
 kubectl config use-context k8s-cluster-2
 kubectl config use-context minikube
 
+Установить неймспейс
+```
+kubectl config set-context --current --namespace=my-namespace
+```
+
 # Nodes
 
 kubectl get nodes
