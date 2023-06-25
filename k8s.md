@@ -687,5 +687,241 @@ spec:
         - containerPort: 8000
 ```
 
+# Volumes
+Если мы скачиваем что-то во врайтабл слой контейнера, это медленнее и занимает больше места на диске. В кубернетес можно примонтировать к контейнерам emptyDir, которая будет сохранять файлы на диск ноды и этот волюм будет жить до тех пор, пока живы поды. Если под закрашится и перезапустится, то эмтидир останется. Если под пересоздастся, то эмтидир удалится.
+Если мы монтируем эмтидир в каталог, в котором уже существуют данные, то эти данные скроются. Чтобы данные не скрывались, надо монтировать в папку используя параметр subPath.
+Пример с эмтидиром:
+```
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kuber
+  labels:
+    app: kuber
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: http-server
+  template:
+    metadata:
+      labels:
+        app: http-server
+    spec:
+      containers:
+      - name: kuber-app-1
+        image: bakavets/kuber
+        ports:
+        - containerPort: 8000
+        volumeMounts:
+        - mountPath: /cache-1
+          name: cache-volume
+      - name: nginx
+        image: nginx
+        ports:
+        - containerPort: 80
+        volumeMounts:
+        - mountPath: /usr/share/nginx/html/data
+        # - mountPath: /cache-2
+          name: cache-volume
+          subPath: data
+      volumes:
+      - name: cache-volume
+        emptyDir: {}
+```
+
+
+# ConfigMap
+Для хранения несекретных данных в формате ключ-значение. Поды могут использовать их как переменные окружения, аргументы командной строки или файлы конфигурации волюмов.
+Например, нам надо указать хост базы данных.
+Конфиг файлы для приложений.
+Если конфиг файлы большие, то обычно используют волюмы.
+
+
+Пример конфигмапа:
+```
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: demo-cm
+data:
+  # property-like keys; each key maps to a simple value
+  interval: "5"
+  count: "3"
+  # file-like keys
+  properties: |
+    Hello from World!
+    This is demo config!
+    As an example.
+  config.ini: "This is demo config!"
+```
+
+Пример деплоя с конфигмапом:
+```
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kuber-2
+  labels:
+    app: kuber-2
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: http-server-2
+  template:
+    metadata:
+      labels:
+        app: http-server-2
+    spec:
+      containers:
+      - name: kuber-app
+        image: bakavets/kuber:v1.0-args
+        args: ["$(INTERVAL)","$(COUNT)","$(TEXT_ARG)"]
+        ports:
+        - containerPort: 8000
+        env:
+          - name: INTERVAL
+            valueFrom:
+              configMapKeyRef:
+                name: demo-cm
+                key: interval
+          - name: COUNT
+            valueFrom:
+              configMapKeyRef:
+                name: demo-cm
+                key: count
+          - name: TEXT_ARG
+            valueFrom:
+              configMapKeyRef:
+                name: demo-cm
+                key: properties
+        volumeMounts:
+        - name: config
+          mountPath: "/config"
+          readOnly: true
+      volumes:
+        # You set volumes at the Pod level, then mount them into containers inside that Pod
+        - name: config
+          configMap:
+            # Provide the name of the ConfigMap you want to mount.
+            name: demo-cm
+            # An array of keys from the ConfigMap to create as files
+            items:
+            - key: "properties"
+              path: "properties"
+            - key: "config.ini"
+              path: "config.ini"
+```
+
+Когдв мы мапим конфиг через volumeMounts, у нас скроются все остальные файлы в каталоге.
+Чтобы не скрылись, можно использовать subPath:
+```
+          volumeMounts:
+            - name: nginx-conf
+              mountPath: /etc/nginx/conf.d/nginx.conf
+              subPath: nginx.conf
+              readOnly: true
+```
+
+Ниже полный пример
+
+```
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nginx-conf-file
+  labels:
+    app: nginx
+data:
+  nginx.conf: |
+    server {
+      listen 80;
+      access_log /var/log/nginx/reverse-access.log;
+      error_log /var/log/nginx/reverse-error.log;
+      location / {
+            proxy_pass https://github.com/bakavets;
+      }
+    }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-proxy
+spec:
+  selector:
+    matchLabels:
+      app: nginx
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      containers:
+        - name: nginx
+          image: nginx
+          ports:
+          - containerPort: 80
+          volumeMounts:
+            - name: nginx-conf
+              mountPath: /etc/nginx/conf.d/nginx.conf
+              subPath: nginx.conf
+              readOnly: true
+      volumes:
+        - name: nginx-conf
+          configMap:
+            name: nginx-conf-file
+```
+
+
+Переменные окружения можно объявлять через блок env
+```
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kuber-1
+  labels:
+    app: kuber-1
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: http-server-1
+  template:
+    metadata:
+      labels:
+        app: http-server-1
+    spec:
+      containers:
+      - name: kuber-app
+        image: bakavets/kuber:v1.0
+        ports:
+        - containerPort: 8000
+        env:
+        - name: HELLO
+          value: "Hello"
+        - name: WORLD
+          value: "World"
+        - name: ENV_HELLO_WORLD
+          value: "$(HELLO)_$(WORLD) from Pod"
+
+```
+
+
+Create a Kubernetes Configmap with custom nginx.conf using kubectl:
+
+kubectl create configmap nginx-config --from-file=nginx.conf
+
+Create ConfigMaps from literal values
+You can use kubectl create configmap with the --from-literal argument to define a literal value from the command line:
+
+kubectl create configmap config --from-literal=interval=7 --from-literal=count=3 --from-literal=config.ini="Hello from ConfigMap"
+
+Create ConfigMaps from folder:
+kubectl create configmap my-config --from-file=configs/
+
+Use the option --from-env-file to create a ConfigMap from an env-file, for example:
+kubectl create configmap config-env-file --from-env-file=env-file.properties
 
 
