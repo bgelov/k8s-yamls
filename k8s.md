@@ -8,9 +8,16 @@ kubectl delete -f <путь до файла или прямая ссылка н�
 
 # Minikube
 Запустить кластер с именем
+```
 minikube start --profile k8s-cluster-1
 minikube start --profile k8s-cluster-2
 minikube start --profile minikube
+```
+
+Удалить кластер с именем
+```
+minikube delete --profile minikube
+```
 
 Статус кластера
 minikube status --profile k8s-cluster-1
